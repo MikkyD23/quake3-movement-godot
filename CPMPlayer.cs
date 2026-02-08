@@ -41,33 +41,26 @@ public partial class CPMPlayer : CharacterBody3D
 {
 	public Transform3D playerView;     // Camera
 	public float playerViewYOffset = 0.6f; // The height at which the camera is bound to
-	public float xMouseSensitivity = 0.5f;
-	public float yMouseSensitivity = 0.5f;
+	public float xMouseSensitivity = 0.3f;
+	public float yMouseSensitivity = 0.3f;
 //
 	/*Frame occuring factors*/
-	public float gravity = 200.0f;
+	public float gravity = 500.0f;
 
-	public float friction = 6; //Ground friction"res://Player.gd"
+	public float friction = 12; //Ground friction
 
 	/* Movement stuff */
 	public float moveSpeed = 700.0f;                // Ground move speed
 	public float runAcceleration = 14.0f;         // Ground accel
 	public float runDeacceleration = 10.0f;       // Deacceleration that occurs when running on the ground
-	public float airAcceleration = 20.0f;          // Air accel
-	public float airDecceleration = 20.0f;         // Deacceleration experienced when ooposite strafing
+	public float airAcceleration = 40.0f;          // Air accel
+	public float airDecceleration = 40.0f;         // Deacceleration experienced when ooposite strafing
 	public float airControl = 0.3f;               // How precise air control is
-	public float sideStrafeAcceleration = 50.0f;  // How fast acceleration occurs to get up to sideStrafeSpeed when
-	public float sideStrafeSpeed = 1.0f;          // What the max speed to generate when side strafing
-	public float jumpSpeed = 400.0f;                // The speed at which the character's up axis gains when hitting jump
+	public float sideStrafeAcceleration = 100.0f;  // How fast acceleration occurs to get up to sideStrafeSpeed when
+	public float sideStrafeSpeed = 100.0f;          // What the max speed to generate when side strafing
+	public float jumpSpeed = 300.0f;                // The speed at which the character's up axis gains when hitting jump
 	public bool holdJumpToBhop = false;           // When enabled allows player to just hold jump button to keep on bhopping perfectly. Beware: smells like casual.
 
-
-	/*FPS Stuff */
-	public float fpsDisplayRate = 4.0f; // 4 updates per sec
-
-	private int frameCount = 0;
-	private float dt = 0.0f;
-	private float fps = 0.0f;
 
 	private CharacterBody3D _controller;
 
@@ -129,15 +122,6 @@ public partial class CPMPlayer : CharacterBody3D
 
 	public override void _Process(double delta)
 	{
-		// Do FPS calculation
-		frameCount++;
-		dt += (float)delta;
-		if (dt > 1.0 / fpsDisplayRate)
-		{
-			fps = Mathf.Round(frameCount / dt);
-			frameCount = 0;
-			dt -= 1.0f / fpsDisplayRate;
-		}
 
 		/* Ensure that the cursor is locked into the screen */
 		if (Input.MouseMode != Input.MouseModeEnum.Captured)
@@ -214,12 +198,12 @@ public partial class CPMPlayer : CharacterBody3D
 		SetMovementDir();
 
 		wishdir = (Transform.Basis.Z * _cmd.forwardMove) + (Transform.Basis.X * _cmd.rightMove);
+		wishdir = wishdir.Normalized();
 
 
 		float wishspeed = wishdir.Length();
 		wishspeed *= moveSpeed;
 
-		wishdir = wishdir.Normalized();
 		moveDirectionNorm = wishdir;
 
 		// CPM: Aircontrol
@@ -302,7 +286,7 @@ public partial class CPMPlayer : CharacterBody3D
 		SetMovementDir();
 
 		wishdir = (Transform.Basis.Z * _cmd.forwardMove) + (Transform.Basis.X * _cmd.rightMove);
-		
+
 
 		wishdir = wishdir.Normalized();
 		moveDirectionNorm = wishdir;
