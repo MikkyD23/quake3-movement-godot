@@ -242,8 +242,8 @@ public partial class CPMPlayer : CharacterBody3D
 		float k;
 
 		// Can't control movement if not moving forward or backward
-		if(Mathf.Abs(_cmd.forwardMove) < 0.001 || Mathf.Abs(wishspeed) < 0.001)
-			return;
+		// if(Mathf.Abs(_cmd.forwardMove) < 0.001 || Mathf.Abs(wishspeed) < 0.001)
+		// 	return;
 		zspeed = playerVelocity.Y;
 		playerVelocity.Y = 0;
 		/* Next two lines are equivalent to idTech's VectorNormalize() */
