@@ -25,7 +25,7 @@
  # - Default values are accurate and emulates Quake 3's feel with CPM(A) physics.
  #
  #
-extends CharacterBody3D
+extends Node
 
 
 # Contains the command the user wishes upon the character
@@ -34,6 +34,7 @@ class Cmd:
 	var rightMove: float;
 	var upMove: float;
 
+@export var playerBody: CharacterBody3D;
 
 var playerView: Transform3D ;     # Camera
 var playerViewYOffset: float = 0.6; # The height at which the camera is bound to
@@ -83,9 +84,9 @@ func _ready() -> void:
 	
 	# Put the camera inside the capsule collider
 	playerView.origin = Vector3(
-		transform.origin.x,
-		transform.origin.y + playerViewYOffset,
-		transform.origin.z);
+		playerBody.transform.origin.x,
+		playerBody.transform.origin.y + playerViewYOffset,
+		playerBody.transform.origin.z);
 
 
 func _input(event: InputEvent) -> void:
@@ -101,7 +102,7 @@ func _input(event: InputEvent) -> void:
 		elif (rotX > 90):
 			rotX = 90;
 
-		rotation = Quaternion.from_euler(Vector3(rotX, rotY, 0)).get_euler(); # Rotates the collider
+		playerBody.rotation = Quaternion.from_euler(Vector3(rotX, rotY, 0)).get_euler(); # Rotates the collider
 		# playerView. = Quaternion.FromEuler(Vector3(rotX, rotY, 0)).GetEuler(); # Rotates the camera
 
 
@@ -115,14 +116,14 @@ func _process(delta: float) -> void:
 
 	# Movement, here's the important part */
 	QueueJump();
-	if (is_on_floor()):
+	if (playerBody.is_on_floor()):
 		GroundMove();
-	elif (!is_on_floor()):
+	elif (!playerBody.is_on_floor()):
 		AirMove();
 
 	# Move the controller
-	velocity = playerVelocity * delta;
-	move_and_slide();
+	playerBody.velocity = playerVelocity * delta;
+	playerBody.move_and_slide();
 
 	# Calculate top velocity */
 	var udp: Vector3  = playerVelocity;
@@ -172,7 +173,7 @@ func AirMove() -> void:
 	
 	SetMovementDir();
 
-	wishdir = (transform.basis.z * _cmd.forwardMove) + (transform.basis.x * _cmd.rightMove);
+	wishdir = (playerBody.transform.basis.z * _cmd.forwardMove) + (playerBody.transform.basis.x * _cmd.rightMove);
 	wishdir = wishdir.normalized();
 
 
@@ -252,7 +253,7 @@ func GroundMove() -> void:
 
 	SetMovementDir();
 
-	wishdir = (transform.basis.z * _cmd.forwardMove) + (transform.basis.x * _cmd.rightMove);
+	wishdir = (playerBody.transform.basis.z * _cmd.forwardMove) + (playerBody.transform.basis.x * _cmd.rightMove);
 
 
 	wishdir = wishdir.normalized();
@@ -285,7 +286,7 @@ func ApplyFriction(amount: float) -> void:
 	drop = 0.0;
 
 	# Only if the player is on the ground then apply friction */
-	if(is_on_floor()):
+	if(playerBody.is_on_floor()):
 		control = runDeacceleration if speed < runDeacceleration else speed;
 		drop = control * friction * get_process_delta_time() * amount;
 
