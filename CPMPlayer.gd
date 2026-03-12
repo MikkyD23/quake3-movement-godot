@@ -50,8 +50,8 @@ var friction: float = 12; #Ground friction
 var moveSpeed: float = 700.0;                # Ground move speed
 var runAcceleration: float = 14.0;         # Ground accel
 var runDeacceleration: float = 10.0;       # Deacceleration that occurs when running on the ground
-var airAcceleration: float = 40.0;          # Air accel
-var airDecceleration: float = 40.0;         # Deacceleration experienced when ooposite strafing
+var airAcceleration: float = 20.0;          # Air accel
+var airDecceleration: float = 20.0;         # Deacceleration experienced when ooposite strafing
 var airControl: float = 0.3;               # How precise air control is
 var sideStrafeAcceleration: float = 100.0;  # How fast acceleration occurs to get up to sideStrafeSpeed when
 var sideStrafeSpeed: float = 100.0;          # What the max speed to generate when side strafing
@@ -174,12 +174,11 @@ func AirMove() -> void:
 	SetMovementDir();
 
 	wishdir = (playerBody.transform.basis.z * _cmd.forwardMove) + (playerBody.transform.basis.x * _cmd.rightMove);
-	wishdir = wishdir.normalized();
-
 
 	var wishspeed: float = wishdir.length();
 	wishspeed *= moveSpeed;
 
+	wishdir = wishdir.normalized();
 	moveDirectionNorm = wishdir;
 
 	# CPM: Aircontrol
@@ -254,9 +253,8 @@ func GroundMove() -> void:
 	SetMovementDir();
 
 	wishdir = (playerBody.transform.basis.z * _cmd.forwardMove) + (playerBody.transform.basis.x * _cmd.rightMove);
-
-
 	wishdir = wishdir.normalized();
+
 	moveDirectionNorm = wishdir;
 
 	var wishspeed = wishdir.length();
