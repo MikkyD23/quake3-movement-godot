@@ -35,9 +35,9 @@ class Cmd:
 	var upMove: float;
 
 @export var playerBody: CharacterBody3D;
+@export var crouchNode: Node3D;
 
-var playerView: Transform3D ;     # Camera
-var playerViewYOffset: float = 0.6; # The height at which the camera is bound to
+var playerView: Camera3D ;     # Camera
 var xMouseSensitivity: float = 0.3;
 var yMouseSensitivity: float = 0.3;
 #
@@ -47,17 +47,18 @@ var gravity: float = 500.0;
 var friction: float = 12; #Ground friction
 
 # Movement stuff */
-var moveSpeed: float = 700.0;                # Ground move speed
-var runAcceleration: float = 14.0;         # Ground accel
+var moveSpeed: float = 600.0;                # Ground move speed
+var runAcceleration: float = 9.0;         # Ground accel
 var runDeacceleration: float = 10.0;       # Deacceleration that occurs when running on the ground
-var airAcceleration: float = 20.0;          # Air accel
-var airDecceleration: float = 20.0;         # Deacceleration experienced when ooposite strafing
-var airControl: float = 0.3;               # How precise air control is
-var sideStrafeAcceleration: float = 100.0;  # How fast acceleration occurs to get up to sideStrafeSpeed when
-var sideStrafeSpeed: float = 100.0;          # What the max speed to generate when side strafing
-var jumpSpeed: float = 300.0;                # The speed at which the character's up axis gains when hitting jump
+var airAcceleration: float = 3.0;          # Air accel
+var airDecceleration: float = 10.0;         # Deacceleration experienced when ooposite strafing
+var airControl: float = 1;               # How precise air control is
+var sideStrafeAcceleration: float = 40.0;  # How fast acceleration occurs to get up to sideStrafeSpeed when
+var sideStrafeSpeed: float = 30.0;          # What the max speed to generate when side strafing
+var jumpSpeed: float = 250.0;                # The speed at which the character's up axis gains when hitting jump
 var holdJumpToBhop: bool  = false;           # When enabled allows player to just hold jump button to keep on bhopping perfectly. Beware: smells like casual.
-
+const crouchSpeed: float = 15;
+const crouchOffset: Vector3 = Vector3(0,-1.5,0)
 
 # Camera rotations
 var rotX: float = 0.0;
@@ -80,13 +81,8 @@ func _ready() -> void:
 	# Hide the cursor
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	
-	playerView = get_viewport().get_camera_3d().transform;
+	playerView = get_viewport().get_camera_3d();
 	
-	# Put the camera inside the capsule collider
-	playerView.origin = Vector3(
-		playerBody.transform.origin.x,
-		playerBody.transform.origin.y + playerViewYOffset,
-		playerBody.transform.origin.z);
 
 
 func _input(event: InputEvent) -> void:
@@ -97,17 +93,17 @@ func _input(event: InputEvent) -> void:
 		rotY -= moveEvent.relative.x * yMouseSensitivity * 0.02;
 
 		# Clamp the X rotation
-		if (rotX < -90):
-			rotX = -90;
-		elif (rotX > 90):
-			rotX = 90;
+		if (rotX < deg_to_rad(-90)):
+			rotX = deg_to_rad(-90);
+		elif (rotX > deg_to_rad(90)):
+			rotX = deg_to_rad(90);
+		
+		playerBody.rotation = Quaternion.from_euler(Vector3(0, rotY, 0)).get_euler(); # Rotates the collider
+		playerView.global_rotation = Quaternion.from_euler(Vector3(rotX, rotY, 0)).get_euler(); # Rotates the camera
 
-		playerBody.rotation = Quaternion.from_euler(Vector3(rotX, rotY, 0)).get_euler(); # Rotates the collider
-		# playerView. = Quaternion.FromEuler(Vector3(rotX, rotY, 0)).GetEuler(); # Rotates the camera
 
 
-
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	# Ensure that the cursor is locked into the screen */
 	if (Input.mouse_mode != Input.MOUSE_MODE_CAPTURED):
 		if (Input.is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)):
@@ -122,7 +118,7 @@ func _process(delta: float) -> void:
 		AirMove();
 
 	# Move the controller
-	playerBody.velocity = playerVelocity * delta;
+	playerBody.velocity = playerVelocity * 0.02;
 	playerBody.move_and_slide();
 
 	# Calculate top velocity */
@@ -130,14 +126,11 @@ func _process(delta: float) -> void:
 	udp.y = 0.0;
 	if (udp.length() > playerTopVelocity):
 		playerTopVelocity = udp.length();
+	
+	crouchNode.position = crouchNode.position.lerp(cameraOffsetTarget, crouchSpeed * delta)
 
-	#Need to move the camera after the player has been moved because otherwise the camera will clip the player if going fast enough and will always be 1 frame behind.
-	# Set the camera's position to the transform
-	# playerView.position = new Vector3(
-	# 	transform.position.X,
-	# 	transform.position.Y + playerViewYOffset,
-	# 	transform.position.Z);
 
+#func _process(delta: float) -> void:	
 
  #******************************************************************************************************\
  # MOVEMENT
@@ -149,6 +142,10 @@ func _process(delta: float) -> void:
 func SetMovementDir() -> void:
 	_cmd.forwardMove = Input.get_axis("ui_up", "ui_down");
 	_cmd.rightMove = Input.get_axis("ui_left", "ui_right");
+
+var cameraOffsetTarget: Vector3:
+	get:
+		return crouchOffset if Input.is_action_pressed("crouch") else Vector3.ZERO;
 
 #*
 #* Queues the next jump just like in Q3
@@ -199,7 +196,7 @@ func AirMove() -> void:
 	# !CPM: Aircontrol
 
 	# Apply gravity
-	playerVelocity.y -= gravity * get_process_delta_time();
+	playerVelocity.y -= gravity * get_physics_process_delta_time();
 
  #*
  #* Air control occurs when the player is in the air, it allows
@@ -213,8 +210,8 @@ func AirControl(wishdir: Vector3, wishspeed: float ) -> void:
 	var k: float;
 
 	# Can't control movement if not moving forward or backward
-	# if(Mathf.Abs(_cmd.forwardMove) < 0.001 || Mathf.Abs(wishspeed) < 0.001)
-	# 	return;
+	if(abs(_cmd.forwardMove) < 0.001 || abs(wishspeed) < 0.001):
+		return;
 	zspeed = playerVelocity.y;
 	playerVelocity.y = 0;
 	# Next two lines are equivalent to idTech's VectorNormalize() */
@@ -223,7 +220,7 @@ func AirControl(wishdir: Vector3, wishspeed: float ) -> void:
 
 	dot = playerVelocity.dot(wishdir);
 	k = 32;
-	k *= airControl * dot * dot * get_process_delta_time();
+	k *= airControl * dot * dot * get_physics_process_delta_time();
 
 	# Change direction while slowing down
 	if (dot > 0):
@@ -263,7 +260,7 @@ func GroundMove() -> void:
 	Accelerate(wishdir, wishspeed, runAcceleration);
 
 	# Reset the gravity velocity
-	playerVelocity.y = -gravity * get_process_delta_time();
+	playerVelocity.y = -gravity * get_physics_process_delta_time();
 
 	if(wishJump):
 		playerVelocity.y = jumpSpeed;
@@ -286,7 +283,7 @@ func ApplyFriction(amount: float) -> void:
 	# Only if the player is on the ground then apply friction */
 	if(playerBody.is_on_floor()):
 		control = runDeacceleration if speed < runDeacceleration else speed;
-		drop = control * friction * get_process_delta_time() * amount;
+		drop = control * friction * get_physics_process_delta_time() * amount;
 
 	newspeed = speed - drop;
 	playerFriction = newspeed;
@@ -307,7 +304,7 @@ func Accelerate(wishdir: Vector3, wishspeed: float, accel: float):
 	addspeed = wishspeed - currentspeed;
 	if(addspeed <= 0):
 		return;
-	accelspeed = accel * get_process_delta_time() * wishspeed;
+	accelspeed = accel * get_physics_process_delta_time() * wishspeed;
 	if(accelspeed > addspeed):
 		accelspeed = addspeed;
 
